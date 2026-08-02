@@ -72,9 +72,9 @@
   nav .dot{
     width:8px; height:8px; border-radius:50%; flex-shrink:0;
     border:1.5px solid var(--line); background:var(--paper);
+    display:none;
   }
-  nav .lesson.done .dot{background:var(--accent); border-color:var(--accent);}
-  nav .lesson.partial .dot{background:linear-gradient(90deg, var(--accent) 50%, var(--paper) 50%); border-color:var(--accent);}
+  nav .lesson.todo .dot{display:inline-block;}
   nav .lesson.todo{color:var(--muted);}
 
   .main{flex:1; min-width:0;}
@@ -1080,7 +1080,6 @@ function showLesson(id){
   }
   document.querySelectorAll('nav .lesson').forEach(el => el.classList.toggle('active', el.dataset.id === id));
   updatePager(id);
-  saveState(id);
 }
 
 function updatePager(id){
@@ -1091,18 +1090,6 @@ function updatePager(id){
   nextBtn.disabled = idx >= FLAT.length - 1;
   prevBtn.onclick = () => idx > 0 && showLesson(FLAT[idx-1].id);
   nextBtn.onclick = () => idx < FLAT.length-1 && showLesson(FLAT[idx+1].id);
-}
-
-async function saveState(id){
-  try { await window.storage.set('js-course-last-lesson', id, false); } catch(e) { /* standalone file, no storage available — fine */ }
-}
-async function loadState(){
-  let start = 'l0';
-  try {
-    const r = await window.storage.get('js-course-last-lesson', false);
-    if (r && r.value) start = r.value;
-  } catch(e) { /* fall back to l1 */ }
-  showLesson(start);
 }
 
 // ---- Copy buttons + syntax highlighting (self-contained, no CDN) ----
@@ -1154,7 +1141,7 @@ document.querySelectorAll('pre').forEach(pre => {
   });
   wrap.appendChild(btn);
 });
-loadState();
+showLesson('l0');
 </script>
 </body>
 </html>
