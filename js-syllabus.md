@@ -82,9 +82,9 @@ unless you ask. Modeled directly on web.dev/learn/javascript's structure.
 
 ## Module 3 — Browser & DOM (Eloquent JS ch. 13–15)
 
-**Lesson 12 — The DOM Tree**
-- [~] 12.1 `document` & `querySelector` *(covered early, in Lesson 3's appendix)*
-- [ ] 12.2 Tree navigation: parent / child / sibling
+**Lesson 12 — The DOM Tree** ✅
+- [x] 12.1 `document` & `querySelector` *(covered early, in Lesson 3's appendix)*
+- [x] 12.2 Tree navigation: parent / child / sibling
 
 **Lesson 13 — Events**
 - [ ] 13.1 `addEventListener`

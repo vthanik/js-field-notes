@@ -921,6 +921,65 @@ import { default as greet } from './hi.js';</code></pre></div>
         </details>
       </section>
 
+      <!-- ============ LESSON 12 ============ -->
+      <section class="lesson-section" data-id="l12">
+        <div class="crumb">MODULE 3 · BROWSER &amp; DOM</div>
+        <h2 class="page-title">Lesson 12 — The DOM Tree</h2>
+        <p class="page-sub">The tree the browser builds from HTML, and how to walk it once you have one node.</p>
+
+        <h3 class="sub">12.1 — document and querySelector (recap)</h3>
+        <p>Covered in depth in Lesson 3's appendix. The short version: <code class="inline">document</code> is the browser-provided entry point to the page tree, <code class="inline">.querySelector(cssSelector)</code> returns the first matching element (or <code class="inline">null</code>), and <code class="inline">.querySelectorAll(cssSelector)</code> returns every match as a <code class="inline">NodeList</code>.</p>
+        <pre><code class="language-javascript">document.querySelector("shiny-chat-container");
+document.querySelectorAll(".nova-card");</code></pre>
+        <p>Both also work on any element, not just <code class="inline">document</code> — <code class="inline">element.querySelector(...)</code> scopes the search to that element's descendants.</p>
+
+        <h3 class="sub">12.2 — Tree navigation: parent, children, sibling</h3>
+        <p>Once you have one node, you can walk to related nodes without a second <code class="inline">querySelector</code> call. Four sets of properties do the work.</p>
+
+        <p><strong>Parent</strong> — one link up:</p>
+        <pre><code class="language-javascript">node.parentElement       // element containing this one, or null at the root</code></pre>
+
+        <p><strong>Children</strong> — the elements directly inside:</p>
+        <pre><code class="language-javascript">node.children            // HTMLCollection of ELEMENT children (skips text/comment nodes)
+node.firstElementChild   // first element child, or null
+node.lastElementChild    // last element child, or null
+node.childNodes          // ALL child nodes including text/comment — rarely what you want</code></pre>
+
+        <p><strong>Siblings</strong> — the elements to either side of this one:</p>
+        <pre><code class="language-javascript">node.previousElementSibling  // element sibling before this one, or null
+node.nextElementSibling      // element sibling after this one, or null</code></pre>
+
+        <p><strong>Ancestor by selector</strong> — walk up until something matches. The workhorse for event delegation:</p>
+        <pre><code class="language-javascript">node.closest(cssSelector)    // closest ancestor (or this node itself) matching the selector, or null</code></pre>
+
+        <p>Why every navigation property has an "Element" version: the DOM tree includes text nodes and comment nodes between elements. <code class="inline">.children</code> gives you the two <code class="inline">&lt;li&gt;</code> elements inside a <code class="inline">&lt;ul&gt;</code>; <code class="inline">.childNodes</code> also includes the whitespace text nodes between them, which is almost never what you want. Default to the Element-suffixed properties; reach for <code class="inline">.childNodes</code>/<code class="inline">.nextSibling</code> only when you specifically need text or comment nodes.</p>
+
+        <p><strong>From nova.js</strong> — <code class="inline">.closest()</code> is what makes event delegation work. A click event's <code class="inline">target</code> is the deepest child under the pointer (an <code class="inline">&lt;svg&gt;</code> icon inside a button, say); <code class="inline">.closest()</code> walks up to the button itself:</p>
+        <pre><code class="language-javascript">document.addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".nova-card-actions button");
+  if (!btn) return;
+  // ...act on the button
+});</code></pre>
+
+        <p>And a sibling walk from the same file — step backward through message siblings, skipping the typing-dots node until the previous real message is found:</p>
+        <pre><code class="language-javascript">let prev = msg && msg.previousElementSibling;
+while (prev && !novaIsMessage(prev)) {
+  prev = prev.previousElementSibling;
+}</code></pre>
+
+        <p><strong>R comparison:</strong> the DOM is browser-only, but the shape maps closely to <code class="inline">xml2</code>: <code class="inline">xml_parent</code>, <code class="inline">xml_children</code>, <code class="inline">xml_siblings</code>, <code class="inline">xml_find_first</code>. Different names, same tree walk.</p>
+
+        <details class="check">
+          <summary>Check yourself</summary>
+          <div class="check-q"><p style="padding:0 0 8px;">Given this HTML:</p><pre><code class="language-javascript">&lt;div id="box"&gt;
+  &lt;p&gt;one&lt;/p&gt;
+  &lt;p&gt;two&lt;/p&gt;
+&lt;/div&gt;</code></pre><p style="padding:0 0 8px;">What do these return?</p><pre><code class="language-javascript">document.querySelector('#box').children.length
+document.querySelector('#box p').nextElementSibling.textContent</code></pre></div>
+          <div class="check-a"><strong>Answer:</strong> <code class="inline">2</code> and <code class="inline">"two"</code>. <code class="inline">.children</code> only counts element children — the two <code class="inline">&lt;p&gt;</code> tags — while the whitespace between them lives on <code class="inline">.childNodes</code>. <code class="inline">querySelector('#box p')</code> returns the first matching <code class="inline">&lt;p&gt;</code>, and <code class="inline">.nextElementSibling</code> from there is the second <code class="inline">&lt;p&gt;</code>. Swap <code class="inline">.nextElementSibling</code> for <code class="inline">.nextSibling</code> and you'd get the whitespace text node between them instead.</div>
+        </details>
+      </section>
+
       <!-- ============ LESSON 21 ============ -->
       <section class="lesson-section" data-id="l21">
         <div class="crumb">MODULE 5 · SHINY INTEGRATION API</div>
@@ -1015,7 +1074,7 @@ const COURSE = [
     { id:"l11", title:"11. async/await", status:"partial" },
   ]},
   { mod: "Module 3 — Browser & DOM", lessons: [
-    { id:"l12", title:"12. The DOM Tree", status:"partial" },
+    { id:"l12", title:"12. The DOM Tree", status:"done" },
     { id:"l13", title:"13. Events & Delegation", status:"todo" },
     { id:"l14", title:"14. Building Elements", status:"todo" },
     { id:"l15", title:"15. Forms & FormData", status:"todo" },
