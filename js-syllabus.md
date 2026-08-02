@@ -45,27 +45,27 @@ unless you ask. Modeled directly on web.dev/learn/javascript's structure.
 - [x] 3.7 Naming conventions
 - [x] *(bonus, Module 3 preview)* `document` & `querySelector` basics
 
-**Lesson 4 — Objects & Destructuring**
-- [ ] 4.1 Object literals & shorthand properties
-- [ ] 4.2 Destructuring (`const { a, b } = obj`)
-- [ ] 4.3 Spread & rest (`{...obj, x: 1}`)
+**Lesson 4 — Objects & Destructuring** ✅
+- [x] 4.1 Object literals & shorthand properties
+- [x] 4.2 Destructuring (`const { a, b } = obj`)
+- [x] 4.3 Spread & rest (`{...obj, x: 1}`)
 
-**Lesson 5 — Arrays & Array Methods**
-- [ ] 5.1 `.map` / `.filter` / `.reduce`
-- [ ] 5.2 Mutating vs. non-mutating methods
-- [ ] 5.3 `.find` / `.some` / `.every` / `.indexOf` / `.splice`
+**Lesson 5 — Arrays & Array Methods** ✅
+- [x] 5.1 `.map` / `.filter` / `.reduce`
+- [x] 5.2 Mutating vs. non-mutating methods
+- [x] 5.3 `.find` / `.some` / `.every` / `.indexOf` / `.splice`
 
-**Lesson 6 — Strings & Template Literals**
-- [ ] 6.1 Template literals & interpolation
-- [ ] 6.2 Common string methods
+**Lesson 6 — Strings & Template Literals** ✅
+- [x] 6.1 Template literals & interpolation
+- [x] 6.2 Common string methods
 
-**Lesson 7 — Classes & Prototypes (light pass)**
-- [ ] 7.1 Class syntax
-- [ ] 7.2 `this` inside a class
+**Lesson 7 — Classes & Prototypes (light pass)** ✅
+- [x] 7.1 Class syntax
+- [x] 7.2 `this` inside a class
 
-**Lesson 8 — Modules**
-- [ ] 8.1 `import` / `export`
-- [ ] 8.2 When you don't need them (plain `<script>`-loaded files like `nova.js`)
+**Lesson 8 — Modules** ✅
+- [x] 8.1 `import` / `export`
+- [x] 8.2 When you don't need them (plain `<script>`-loaded files like `nova.js`)
 
 ## Module 2 — Asynchronous JavaScript
 

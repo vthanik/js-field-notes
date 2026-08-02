@@ -684,6 +684,243 @@ console.log(counterB());</code></pre></div>
         </details>
       </section>
 
+      <!-- ============ LESSON 4 ============ -->
+      <section class="lesson-section" data-id="l4">
+        <div class="crumb">MODULE 1 · CORE LANGUAGE FOUNDATIONS</div>
+        <h2 class="page-title">Lesson 4 — Objects &amp; Destructuring</h2>
+        <p class="page-sub">Object literals in shorthand, pulling values out of them by name, and the one syntax that packs and unpacks.</p>
+
+        <h3 class="sub">4.1 — Object literals and shorthand properties</h3>
+        <pre><code class="language-javascript">const name = "Vignesh";
+const age = 37;
+const user = { name, age, role: "programmer" };
+// same as: { name: name, age: age, role: "programmer" }</code></pre>
+        <p>When a property name matches the variable holding its value, <code class="inline">{ name }</code> is shorthand for <code class="inline">{ name: name }</code>. You'll see this constantly — every "return this bundle of state" line in a React hook, every "forward these props" pattern.</p>
+        <p><strong>R comparison:</strong> R's <code class="inline">list(x = x, y = y)</code> has no shorthand. JS's compressed form is why <code class="inline">{ items, filter, sort }</code> reads clean instead of repeating each name twice.</p>
+
+        <h3 class="sub">4.2 — Destructuring</h3>
+        <pre><code class="language-javascript">const user = { name: "Vignesh", age: 37, role: "programmer" };
+const { name, role } = user;
+// name === "Vignesh"; role === "programmer"</code></pre>
+        <p>Pulls named properties out of an object into local variables in one line. Rename inline if you need a different local:</p>
+        <pre><code class="language-javascript">const { name: userName } = user;   // userName === "Vignesh"</code></pre>
+        <p>Works on arrays too, by position — commas skip elements you don't want:</p>
+        <pre><code class="language-javascript">const [first, , third] = [10, 20, 30];   // first === 10, third === 30</code></pre>
+        <p>And, most usefully, on function parameters:</p>
+        <pre><code class="language-javascript">function greet({ name, role }) {
+  return `Hi ${name}, the ${role}`;
+}
+greet(user);   // "Hi Vignesh, the programmer"</code></pre>
+        <p>Caller passes one object, function pulls out just the fields it needs. Standard in React components, Node request handlers, and every config-object API you'll write.</p>
+
+        <h3 class="sub">4.3 — Spread and rest</h3>
+        <p>The same <code class="inline">...</code> syntax means opposite things depending on where it appears.</p>
+        <p><strong>Spread</strong> — unpack an object or array into a new one:</p>
+        <pre><code class="language-javascript">const base = { name: "Vignesh", role: "programmer" };
+const extended = { ...base, age: 37 };
+// { name: "Vignesh", role: "programmer", age: 37 }</code></pre>
+        <p>Later keys win — <code class="inline">{ ...base, name: "Other" }</code> overrides the name from <code class="inline">base</code>. This is the standard immutable-update pattern: <code class="inline">setState({ ...prev, count: prev.count + 1 })</code>.</p>
+        <p><strong>Rest</strong> — collect the leftovers into one variable:</p>
+        <pre><code class="language-javascript">const { name, ...rest } = { name: "Vignesh", age: 37, role: "programmer" };
+// name === "Vignesh"
+// rest === { age: 37, role: "programmer" }</code></pre>
+        <p>Also works in function parameters — <code class="inline">function log(first, ...others) { ... }</code> makes <code class="inline">others</code> a real array of every remaining argument.</p>
+
+        <details class="check">
+          <summary>Check yourself</summary>
+          <div class="check-q"><pre><code class="language-javascript">const a = { x: 1, y: 2 };
+const b = { ...a, y: 99, z: 5 };</code></pre><p style="padding:0 0 8px;">What is <code class="inline">b</code>, and has <code class="inline">a</code> changed?</p></div>
+          <div class="check-a"><strong>Answer:</strong> <code class="inline">b === { x: 1, y: 99, z: 5 }</code> — later keys override earlier ones. <code class="inline">a</code> is untouched: spread copies properties into a new object rather than mutating the source. That's exactly why "spread + override" is the standard immutable-update pattern.</div>
+        </details>
+      </section>
+
+      <!-- ============ LESSON 5 ============ -->
+      <section class="lesson-section" data-id="l5">
+        <div class="crumb">MODULE 1 · CORE LANGUAGE FOUNDATIONS</div>
+        <h2 class="page-title">Lesson 5 — Arrays &amp; Array Methods</h2>
+        <p class="page-sub">The map/filter/reduce trio, which methods mutate versus return new, and the smaller helpers you'll reach for daily.</p>
+
+        <h3 class="sub">5.1 — .map / .filter / .reduce</h3>
+        <pre><code class="language-javascript">const nums = [1, 2, 3, 4];
+
+const doubled = nums.map(n => n * 2);              // [2, 4, 6, 8]
+const evens   = nums.filter(n => n % 2 === 0);     // [2, 4]
+const sum     = nums.reduce((acc, n) => acc + n, 0); // 10</code></pre>
+        <p><code class="inline">.map(fn)</code> transforms each element and returns a same-length new array. <code class="inline">.filter(fn)</code> keeps elements where <code class="inline">fn</code> returns truthy. <code class="inline">.reduce(fn, init)</code> folds left: <code class="inline">fn(accumulator, element)</code>, one value out.</p>
+        <p><strong>R comparison:</strong> identical to <code class="inline">purrr::map()</code>, <code class="inline">purrr::keep()</code>, <code class="inline">purrr::reduce()</code>. Every one of them returns a new array; the original is never touched.</p>
+
+        <h3 class="sub">5.2 — Mutating vs. non-mutating methods</h3>
+        <p>JS has both, and the ones that mutate are named plainly — no <code class="inline">_</code> suffix, no <code class="inline">mutate</code> word, no visible signal:</p>
+        <pre><code class="language-javascript">// Non-mutating (returns new array):
+[1,2,3].map, .filter, .slice, .concat, .flat
+
+// Mutating (changes the array in place):
+.push, .pop, .shift, .unshift, .splice, .sort, .reverse</code></pre>
+        <p><code class="inline">.sort()</code> is the classic footgun — it mutates AND returns the sorted array, so both names end up pointing at the same sorted array:</p>
+        <pre><code class="language-javascript">const raw = [3, 1, 2];
+const sorted = raw.sort();
+// raw    === [1, 2, 3]  ← the original is now sorted too
+// sorted === [1, 2, 3]  ← same array, not a copy</code></pre>
+        <p>Fix: copy first with <code class="inline">[...raw].sort()</code>, or use the newer non-mutating <code class="inline">raw.toSorted()</code> (ES2023).</p>
+        <p><strong>R comparison:</strong> R functions never mutate arguments — <code class="inline">sort(x)</code> returns a new vector, <code class="inline">x</code> is unchanged. This split personality in JS is a real difference to watch for.</p>
+
+        <h3 class="sub">5.3 — .find / .findIndex / .some / .every / .indexOf / .splice</h3>
+        <pre><code class="language-javascript">const items = [{id:1, ok:true}, {id:2, ok:false}, {id:3, ok:true}];
+
+items.find(x => x.id === 2);      // {id:2, ok:false} — first match, or undefined
+items.findIndex(x => x.id === 2); // 1
+items.some(x => !x.ok);           // true  — any element matches?
+items.every(x => x.ok);           // false — do all elements match?
+
+["a", "b", "c"].indexOf("b");     // 1 — for primitives; use .findIndex for objects</code></pre>
+        <p><code class="inline">.splice(start, deleteCount, ...toInsert)</code> mutates: it cuts elements out (optionally inserting new ones in their place) and returns the removed elements as a new array.</p>
+        <pre><code class="language-javascript">const arr = ["a", "b", "c", "d"];
+const removed = arr.splice(1, 2);
+// arr     === ["a", "d"]
+// removed === ["b", "c"]</code></pre>
+        <p>This is the "remove one item from a stateful list by index" pattern — the <code class="inline">novaAttachments.splice(i, 1)</code> line from Lesson 3.</p>
+
+        <details class="check">
+          <summary>Check yourself</summary>
+          <div class="check-q"><pre><code class="language-javascript">const a = [1, 2, 3];
+const b = a.reverse();
+b.push(0);</code></pre><p style="padding:0 0 8px;">What are <code class="inline">a</code> and <code class="inline">b</code>?</p></div>
+          <div class="check-a"><strong>Answer:</strong> <code class="inline">a === [3, 2, 1, 0]</code> and <code class="inline">b === [3, 2, 1, 0]</code> — the same array, twice. <code class="inline">.reverse()</code> mutates <code class="inline">a</code> in place AND returns it, so <code class="inline">b</code> is another reference to the same array. Then <code class="inline">b.push(0)</code> mutates it — and because <code class="inline">a</code> points at the same memory, <code class="inline">a</code> gains the <code class="inline">0</code> too. If you wanted <code class="inline">a</code> untouched, you'd write <code class="inline">const b = [...a].reverse()</code>.</div>
+        </details>
+      </section>
+
+      <!-- ============ LESSON 6 ============ -->
+      <section class="lesson-section" data-id="l6">
+        <div class="crumb">MODULE 1 · CORE LANGUAGE FOUNDATIONS</div>
+        <h2 class="page-title">Lesson 6 — Strings &amp; Template Literals</h2>
+        <p class="page-sub">Backtick strings with interpolation, and the string methods you'll actually reach for.</p>
+
+        <h3 class="sub">6.1 — Template literals and interpolation</h3>
+        <p>Backticks instead of quotes. <code class="inline">${expr}</code> interpolates any JS expression. Multi-line for free.</p>
+        <pre><code class="language-javascript">const name = "Vignesh";
+const count = 3;
+const msg = `Hi ${name}, you have ${count} messages.
+Check them at ${new Date().toISOString()}.`;</code></pre>
+        <p>Anything that evaluates fits inside <code class="inline">${...}</code> — function calls, arithmetic, ternaries. This is JS's answer to R's <code class="inline">glue::glue("Hi {name}")</code> or Python's f-strings, with the same "just drop the expression in curly braces" ergonomics.</p>
+        <p>Escape a literal backtick with <code class="inline">\`</code>; escape <code class="inline">$</code> that shouldn't interpolate with <code class="inline">\$</code>. Otherwise no escaping needed — single quotes, double quotes, and newlines are all fine inside.</p>
+
+        <h3 class="sub">6.2 — Common string methods</h3>
+        <p>Strings are immutable — every method returns a new string, the original is unchanged.</p>
+        <pre><code class="language-javascript">const s = "  Hello, World  ";
+
+s.trim();                    // "Hello, World"
+s.toLowerCase();             // "  hello, world  "
+s.includes("World");         // true
+s.startsWith("  H");         // true
+s.replace("World", "JS");    // "  Hello, JS  "
+s.replaceAll(",", ";");      // "  Hello; World  "   (ES2021)
+s.split(", ");               // ["  Hello", "World  "]
+"a".repeat(5);               // "aaaaa"</code></pre>
+        <p><code class="inline">.padStart(n, "0")</code> left-pads to length <code class="inline">n</code>. <code class="inline">"5".padStart(3, "0")</code> gives <code class="inline">"005"</code> — handy for HH:MM formatting and left-aligning IDs. Its sibling <code class="inline">.padEnd</code> pads on the right.</p>
+        <p><strong>R comparison:</strong> mostly a one-to-one mapping with <code class="inline">stringr</code> — <code class="inline">str_trim</code>, <code class="inline">str_to_lower</code>, <code class="inline">str_detect</code>, <code class="inline">str_replace</code>, <code class="inline">str_pad</code>. JS's names are camelCase and dot-called directly on the string.</p>
+
+        <details class="check">
+          <summary>Check yourself</summary>
+          <div class="check-q"><pre><code class="language-javascript">`${1 + 2}${"3"}`</code></pre><p style="padding:0 0 8px;">What does this evaluate to — the number 6, the string "33", or something else?</p></div>
+          <div class="check-a"><strong>Answer:</strong> the string <code class="inline">"33"</code>. Template literals always produce strings. Inside them, <code class="inline">1 + 2</code> evaluates first to the number <code class="inline">3</code>, which gets stringified to <code class="inline">"3"</code>, then concatenated with the literal <code class="inline">"3"</code>. Interpolation is: evaluate, stringify, concatenate.</div>
+        </details>
+      </section>
+
+      <!-- ============ LESSON 7 ============ -->
+      <section class="lesson-section" data-id="l7">
+        <div class="crumb">MODULE 1 · CORE LANGUAGE FOUNDATIONS</div>
+        <h2 class="page-title">Lesson 7 — Classes &amp; Prototypes (light pass)</h2>
+        <p class="page-sub">Class syntax at the level you need to read modern JS, plus the one this-binding trap that catches everyone.</p>
+
+        <h3 class="sub">7.1 — Class syntax</h3>
+        <pre><code class="language-javascript">class Counter {
+  constructor(start = 0) {
+    this.count = start;
+  }
+  increment() {
+    this.count += 1;
+    return this.count;
+  }
+}
+
+const c = new Counter(10);
+c.increment();  // 11
+c.increment();  // 12</code></pre>
+        <p><code class="inline">constructor</code> runs when you call <code class="inline">new Counter(...)</code>. Methods defined inside <code class="inline">class</code> become callable via <code class="inline">instance.method()</code>. <code class="inline">this</code> inside a method refers to the instance.</p>
+        <p>Under the hood JS classes are sugar for the older <strong>prototype</strong> system — every method is stored once on <code class="inline">Counter.prototype</code>, not copied per instance, so a thousand counters share one <code class="inline">increment</code> function. For this course that's "read about prototypes on MDN if you're curious; the class syntax is what you'll write."</p>
+        <p><strong>R comparison:</strong> closest to R6 — <code class="inline">R6::R6Class("Counter", public = list(count = 0, increment = function() {...}))</code>. S4 and S7 are shaped differently (methods live outside the class definition, dispatched by generic name).</p>
+
+        <h3 class="sub">7.2 — this inside a class</h3>
+        <p>The <code class="inline">this</code>-binding rule from Lesson 3 still applies: <code class="inline">this</code> is decided by <em>how</em> the method is called, not where it's defined.</p>
+        <pre><code class="language-javascript">const c = new Counter();
+const inc = c.increment;   // pulled off the instance
+inc();                     // TypeError: Cannot read properties of undefined (reading 'count')</code></pre>
+        <p>Two fixes:</p>
+        <pre><code class="language-javascript">// 1. Hard-bind at extraction:
+const bound = c.increment.bind(c);
+bound();  // works — `this` is permanently c
+
+// 2. Wrap in an arrow, which keeps the surrounding `this`:
+document.querySelector('button').addEventListener('click', () => c.increment());</code></pre>
+        <p>Every UI framework has a pattern for this: React's class components used <code class="inline">this.handleClick = this.handleClick.bind(this)</code> in the constructor. Hooks avoided the problem entirely by dropping <code class="inline">this</code> in favor of closures over <code class="inline">useState</code>.</p>
+
+        <details class="check">
+          <summary>Check yourself</summary>
+          <div class="check-q"><pre><code class="language-javascript">class Greeter {
+  constructor(name) { this.name = name; }
+  hi() { return "hi " + this.name; }
+}
+const g = new Greeter("Vignesh");
+const fn = g.hi;
+console.log(fn());</code></pre><p style="padding:0 0 8px;">What gets logged?</p></div>
+          <div class="check-a"><strong>Answer:</strong> a TypeError. <code class="inline">fn</code> was pulled off <code class="inline">g</code> and called as a bare function, so <code class="inline">this</code> inside <code class="inline">hi()</code> is undefined (class bodies run in strict mode), and reading <code class="inline">this.name</code> throws. Calling <code class="inline">g.hi()</code> directly would work — the dot before <code class="inline">hi</code> is what supplies the <code class="inline">this</code>.</div>
+        </details>
+      </section>
+
+      <!-- ============ LESSON 8 ============ -->
+      <section class="lesson-section" data-id="l8">
+        <div class="crumb">MODULE 1 · CORE LANGUAGE FOUNDATIONS</div>
+        <h2 class="page-title">Lesson 8 — Modules (import/export)</h2>
+        <p class="page-sub">How ES modules work, and — importantly for Shiny custom JS — when you don't need them at all.</p>
+
+        <h3 class="sub">8.1 — import and export</h3>
+        <pre><code class="language-javascript">// math.js
+export function square(n) { return n * n; }
+export const PI = 3.14159;
+export default function greet(name) { return `Hello, ${name}`; }</code></pre>
+        <pre><code class="language-javascript">// app.js
+import greet, { square, PI } from './math.js';
+// greet is the default export; square and PI are named exports</code></pre>
+        <p>Two kinds of exports, and the rules are asymmetric:</p>
+        <ul>
+          <li><strong>Named exports</strong> — as many per file as you want (<code class="inline">export function</code>, <code class="inline">export const</code>, or an <code class="inline">export { a, b }</code> block at the bottom). Import them by name, in braces.</li>
+          <li><strong>Default export</strong> — at most one per file (<code class="inline">export default ...</code>). Import with no braces, and you can rename it freely at the import site.</li>
+        </ul>
+        <p>Rename an import: <code class="inline">import { square as sq } from './math.js'</code>. Or grab everything into a namespace: <code class="inline">import * as math from './math.js'</code>, then <code class="inline">math.square(3)</code>.</p>
+        <p>In the browser, the file extension is part of the path — <code class="inline">'./math.js'</code>, not <code class="inline">'./math'</code>. Bundlers (esbuild, Vite, webpack) are more forgiving, but the raw browser is not.</p>
+        <p><strong>R comparison:</strong> closest to an R package's <code class="inline">NAMESPACE</code> file, with its <code class="inline">import()</code>/<code class="inline">importFrom()</code>/<code class="inline">export()</code> directives. Difference: R declares imports and exports in one central <code class="inline">NAMESPACE</code>; JS declares them inline, in each file.</p>
+
+        <h3 class="sub">8.2 — When you don't need modules</h3>
+        <p>A plain <code class="inline">&lt;script src="nova.js"&gt;</code> tag in an HTML page has no <code class="inline">import</code>/<code class="inline">export</code> — the file runs in the page's global scope, and anything defined at the top level (functions, top-level <code class="inline">let</code>/<code class="inline">const</code>) is visible to any other <code class="inline">&lt;script&gt;</code> tag loaded after it.</p>
+        <pre><code class="language-javascript">&lt;script src="utils.js"&gt;&lt;/script&gt;
+&lt;script src="nova.js"&gt;&lt;/script&gt;   // can call anything defined in utils.js</code></pre>
+        <p>This is why <code class="inline">nova.js</code> and similar Shiny custom-JS files use no <code class="inline">import</code>/<code class="inline">export</code> — Shiny loads them with a plain script tag, and they interact with <code class="inline">Shiny</code> (a global) and the DOM directly. Modules would add ceremony for no benefit.</p>
+        <p><strong>Use modules when:</strong> you're bundling with esbuild/Vite/webpack, writing Node code, or serving with <code class="inline">&lt;script type="module" src="..."&gt;</code>. <strong>Skip them when:</strong> writing custom JS for a Shiny app, an existing static site, or any single-file browser thing.</p>
+
+        <details class="check">
+          <summary>Check yourself</summary>
+          <div class="check-q"><p style="padding:0 0 8px;">Given <code class="inline">export default function greet() {}</code> in <code class="inline">hi.js</code>, which of these <code class="inline">import</code> statements work?</p><pre><code class="language-javascript">// A
+import { greet } from './hi.js';
+
+// B
+import greet from './hi.js';
+
+// C
+import { default as greet } from './hi.js';</code></pre></div>
+          <div class="check-a"><strong>Answer:</strong> B and C work; A doesn't. <code class="inline">greet</code> isn't a <em>named</em> export — it's the <em>default</em> export, which has no name at the export site. <code class="inline">import greet from ...</code> (no braces) is the sugar for the default; <code class="inline">import { default as greet }</code> is the explicit long form. A tries to pull a named export called <code class="inline">greet</code>, which doesn't exist, and you'll get <code class="inline">undefined</code>.</div>
+        </details>
+      </section>
+
       <!-- ============ LESSON 21 ============ -->
       <section class="lesson-section" data-id="l21">
         <div class="crumb">MODULE 5 · SHINY INTEGRATION API</div>
@@ -766,11 +1003,11 @@ const COURSE = [
     { id:"l1", title:"1. Variables & Values", status:"done" },
     { id:"l2", title:"2. undefined/null & Truthy-Falsy", status:"done" },
     { id:"l3", title:"3. Functions", status:"done" },
-    { id:"l4", title:"4. Objects & Destructuring", status:"todo" },
-    { id:"l5", title:"5. Arrays & Array Methods", status:"todo" },
-    { id:"l6", title:"6. Strings & Template Literals", status:"todo" },
-    { id:"l7", title:"7. Classes & Prototypes", status:"todo" },
-    { id:"l8", title:"8. Modules (import/export)", status:"todo" },
+    { id:"l4", title:"4. Objects & Destructuring", status:"done" },
+    { id:"l5", title:"5. Arrays & Array Methods", status:"done" },
+    { id:"l6", title:"6. Strings & Template Literals", status:"done" },
+    { id:"l7", title:"7. Classes & Prototypes", status:"done" },
+    { id:"l8", title:"8. Modules (import/export)", status:"done" },
   ]},
   { mod: "Module 2 — Asynchronous JS", lessons: [
     { id:"l9", title:"9. The Event Loop", status:"partial" },
