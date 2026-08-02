@@ -22,3 +22,5 @@ layer (`shinychat`, custom Shiny inputs).
 - `lesson-01-variables-and-values.md`, `lesson-02-undefined-null-truthy-falsy.md`,
   `lesson-03-functions.md` — the earlier standalone lesson-file format,
   kept as-is; superseded by the site for anything written after Lesson 3.
+- `reference/nova.js` — the real Shiny custom-JS file this course teaches
+  you to read and maintain. Every lesson quotes patterns from it.
