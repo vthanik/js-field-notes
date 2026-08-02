@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JS Field Notes — from R to the browser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@300..700&family=Roboto:wght@300;400;500&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F8F9FA;
+    --paper:#FFFFFF;
+    --ink:#202124;
+    --muted:#5F6368;
+    --accent:#1A73E8;
+    --accent-soft:#E8F0FE;
+    --line:#DADCE0;
+    --code-bg:#F1F3F4;
+    --code-text:#37474F;
+    --code-border:#DADCE0;
+    --r-accent:#8A5A3B;
+    --r-soft:#F3E9E1;
+    --py-accent:#2B5F8E;
+    --py-soft:#E7EFF7;
+    --sidebar-w:300px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Google Sans Flex', 'Roboto', Arial, sans-serif;
+    font-weight:400;
+    font-size:17px;
+    line-height:1.65;
+  }
+  h1,h2,h3,h4{font-family:'Google Sans Flex', 'Roboto', Arial, sans-serif; font-weight:400; line-height:1.25; color:var(--ink);}
+  code, pre, .mono{font-family:'Roboto Mono', monospace;}
+
+  /* ---------- Layout ---------- */
+  .shell{display:flex; min-height:100vh;}
+  .sidebar{
+    width:var(--sidebar-w);
+    flex-shrink:0;
+    background:var(--paper);
+    border-right:1px solid var(--line);
+    padding:28px 20px 60px;
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  .brand{margin-bottom:6px;}
+  .brand-mark{
+    font-family:'Roboto Mono'; font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--accent); font-weight:600;
+  }
+  .brand h1{font-size:22px; margin:4px 0 2px; letter-spacing:-.01em;}
+  .brand p{font-size:13px; color:var(--muted); margin:0 0 18px; font-family:'Roboto Mono'; line-height:1.5;}
+
+
+  nav .module{margin-bottom:4px;}
+  nav .module-title{
+    font-family:'Roboto Mono'; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--muted); padding:14px 8px 6px; font-weight:600;
+  }
+  nav .lesson{
+    display:flex; align-items:center; gap:9px;
+    padding:7px 8px; border-radius:6px; cursor:pointer;
+    font-size:14px; color:var(--ink); text-decoration:none;
+  }
+  nav .lesson:hover{background:var(--accent-soft);}
+  nav .lesson.active{background:var(--accent-soft); color:var(--accent); font-weight:600;}
+  nav .dot{
+    width:8px; height:8px; border-radius:50%; flex-shrink:0;
+    border:1.5px solid var(--line); background:var(--paper);
+  }
+  nav .lesson.done .dot{background:var(--accent); border-color:var(--accent);}
+  nav .lesson.partial .dot{background:linear-gradient(90deg, var(--accent) 50%, var(--paper) 50%); border-color:var(--accent);}
+  nav .lesson.todo{color:var(--muted);}
+
+  .main{flex:1; min-width:0;}
+  .content-wrap{max-width:936px; margin:0 auto; padding:56px 40px 120px;}
+  .crumb{font-family:'Roboto Mono'; font-size:12px; color:var(--muted); letter-spacing:.04em; margin-bottom:10px;}
+  .lesson-section{display:none;}
+  .lesson-section.visible{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  h2.page-title{font-size:34px; margin:0 0 6px; font-weight:300;}
+  .page-sub{color:var(--muted); font-size:15px; margin:0 0 34px; font-style:italic;}
+
+  h3.sub{font-size:21px; margin:34px 0 12px; padding-top:4px; border-top:1px solid var(--line); padding-top:24px;}
+  p{margin:0 0 16px;}
+  ul,ol{margin:0 0 16px; padding-left:22px;}
+  li{margin-bottom:6px;}
+
+  code.inline{
+    background:var(--accent-soft); color:#1E5A5B; padding:1px 6px; border-radius:4px;
+    font-size:.88em; font-weight:500;
+  }
+  .code-block{position:relative; margin:0 0 20px;}
+  pre{
+    background:var(--code-bg); color:var(--code-text);
+    border:1px solid var(--code-border);
+    padding:16px 44px 16px 18px; border-radius:6px;
+    overflow-x:auto; overflow-y:hidden;
+    font-size:13.5px; line-height:1.65; margin:0;
+  }
+  pre code{background:none; padding:0; color:inherit; font-size:inherit;}
+  .cm{color:#5F6368;} /* comment tint, applied manually via span where useful */
+
+  /* Syntax token colors — matched to the screenshot's palette */
+  .token.keyword{color:var(--accent); font-weight:500;}
+  .token.number{color:#C4341D;}
+  .token.string,.token.template-string{color:#2A7A3B;}
+  .token.function{color:#8145B5;}
+  .token.comment{color:#5F6368; font-style:italic;}
+  .token.punctuation{color:#5B6470;}
+  .token.operator{color:#3D4552;}
+  .token.boolean,.token.null{color:#C4341D;}
+  .token.property{color:#0B7285;}
+
+  .copy-btn{
+    position:absolute; top:10px; right:10px;
+    width:28px; height:28px; border-radius:6px;
+    background:var(--paper); border:1px solid var(--code-border);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    color:var(--muted); opacity:0; transition:opacity .15s;
+  }
+  .code-block:hover .copy-btn{opacity:1;}
+  .copy-btn:hover{color:var(--accent); border-color:var(--accent);}
+  .copy-btn svg{width:14px; height:14px;}
+  .copy-btn.copied{color:var(--accent);}
+
+  /* Language comparison callout — the signature element. One box,
+     one row per language (R and/or Python), so a page can flag
+     either or both without cluttering the layout. */
+  .lang-note{
+    margin:0 0 20px; border:1px solid var(--line); border-radius:8px;
+    background:#FCFBF8; overflow:hidden;
+  }
+  .lang-row{display:flex; gap:14px; padding:12px 16px;}
+  .lang-row + .lang-row{border-top:1px dashed var(--line);}
+  .lang-row .tag{
+    font-family:'Roboto Mono'; font-size:10px; font-weight:600; letter-spacing:.08em;
+    text-transform:uppercase; white-space:nowrap; padding:2px 8px; border-radius:4px; height:fit-content;
+  }
+  .lang-row.r .tag{background:var(--r-soft); color:var(--r-accent);}
+  .lang-row.py .tag{background:var(--py-soft); color:var(--py-accent);}
+  .lang-row p{margin:0; font-size:15px; color:var(--ink);}
+
+  .check{
+    margin:28px 0 8px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--paper);
+  }
+  .check summary{
+    padding:14px 18px; cursor:pointer; font-family:'Roboto Mono'; font-size:13px; font-weight:600;
+    color:var(--accent); list-style:none; display:flex; align-items:center; gap:8px;
+  }
+  .check summary::-webkit-details-marker{display:none;}
+  .check summary::before{content:"▸"; transition:transform .15s;}
+  .check[open] summary::before{transform:rotate(90deg);}
+  .check-q{padding:0 18px 16px;}
+  .check-a{padding:14px 18px; border-top:1px dashed var(--line); background:#FCFBF8; font-size:15px;}
+
+  .status-card{
+    border:1px dashed var(--line); border-radius:10px; padding:28px; text-align:center; color:var(--muted);
+    margin-top:20px;
+  }
+  .status-card strong{color:var(--ink); display:block; font-family:'Roboto Mono'; font-size:12px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px;}
+
+  .pager{display:flex; justify-content:space-between; margin-top:48px; padding-top:24px; border-top:1px solid var(--line);}
+  .pager button{
+    font-family:'Roboto Mono'; font-size:13px; background:var(--paper); border:1px solid var(--line);
+    padding:10px 16px; border-radius:8px; cursor:pointer; color:var(--ink);
+  }
+  .pager button:hover{border-color:var(--accent); color:var(--accent);}
+  .pager button:disabled{opacity:.35; cursor:default;}
+
+  ::selection{background:var(--accent-soft);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">R + Python → JS</div>
+      <h1>JS Field Notes</h1>
+      <p>Statistical programmer's route into vanilla JS, the DOM, and Shiny's custom-JS layer.</p>
+    </div>
+
+    <nav id="navTree"></nav>
+  </aside>
+
+  <main class="main">
+    <div class="content-wrap" id="contentWrap">
+
+      <!-- ============ LESSON 0 — INTRODUCTION ============ -->
+      <section class="lesson-section" data-id="l0">
+        <div class="crumb">MODULE 0 · INTRODUCTION</div>
+        <h2 class="page-title">Lesson 0 — Introduction to JavaScript</h2>
+        <p class="page-sub">Two parts: the core language on its own (Part 1), then jQuery — the DOM library Shiny's core and most Shiny extension packages are still built on (Part 2). Complete on its own, full examples for each idea.</p>
+
+        <h3 class="sub" style="margin-top:0; padding-top:0; border-top:none; color:var(--accent);">Part 1 — Core JavaScript</h3>
+
+        <h3 class="sub">0.1 — What JavaScript is, and where it runs</h3>
+        <p>JavaScript started as a scripting language for web browsers and is now also a server runtime (Node.js). The <em>language</em> is identical in both places; what differs is the surrounding environment — a browser hands you <code class="inline">document</code> and <code class="inline">window</code> automatically, Node hands you <code class="inline">fs</code>, <code class="inline">process</code>, and no DOM at all. A Shiny custom-JS file runs in the browser environment specifically.</p>
+
+        <h3 class="sub">0.2 — Data types</h3>
+        <p>JS has exactly 7 <strong>primitive</strong> types, plus one catch-all <strong>reference</strong> type:</p>
+        <pre><code class="language-javascript">string     "hello"          text
+number     42, 3.14         one numeric type — int and float alike, no separate types
+boolean    true / false
+undefined  —                declared, never assigned
+null       —                deliberately empty, assigned on purpose
+bigint     10n              integers past Number.MAX_SAFE_INTEGER (~9 quadrillion)
+symbol     Symbol()         rare; unique identifiers, mostly for advanced object tricks
+object     {}, [], fn       everything else — copied by REFERENCE, not by value</code></pre>
+        <p><code class="inline">typeof x</code> tells you which one you're holding, with one wart worth memorizing: <code class="inline">typeof null</code> returns <code class="inline">"object"</code> — a 25-year-old bug baked permanently into the language, not a real object.</p>
+        <p>The primitive/reference split matters because of how assignment behaves. Primitives copy their value:</p>
+        <pre><code class="language-javascript">let a = 5;
+let b = a;   // b gets a COPY of 5
+b = 10;
+console.log(a); // still 5 — independent</code></pre>
+        <p>Objects and arrays copy a <em>pointer</em> to shared data, not the data itself:</p>
+        <pre><code class="language-javascript">let obj1 = { name: "draft" };
+let obj2 = obj1;         // obj2 points to the SAME object, not a copy
+obj2.name = "published";
+console.log(obj1.name);  // "published" — same object, both changed</code></pre>
+
+        <h3 class="sub">0.3 — Variables: const, let, and scope</h3>
+        <p><code class="inline">const</code> — cannot be reassigned. <code class="inline">let</code> — can be reassigned. <code class="inline">var</code> is the 1995 original; it still works but is considered obsolete because it doesn't respect block scope the way <code class="inline">let</code>/<code class="inline">const</code> do — avoid it entirely.</p>
+        <pre><code class="language-javascript">const title = "Draft post";
+let count = 0;
+count = count + 1;   // fine — let allows reassignment
+title = "New title"; // TypeError: Assignment to constant variable</code></pre>
+        <p>Both are <strong>block-scoped</strong>: a variable declared inside <code class="inline">{ }</code> — an <code class="inline">if</code>, a <code class="inline">for</code>, any bare block — does not exist outside that block. Default to <code class="inline">const</code> everywhere; reach for <code class="inline">let</code> only when a value genuinely needs to change later.</p>
+        <p>One nuance worth knowing up front: <code class="inline">const</code> locks the <em>variable binding</em>, not the contents of an object it points to:</p>
+        <pre><code class="language-javascript">const user = { name: "Alice" };
+user.name = "Bob";        // fine — not reassigning `user`, just changing what it points to
+user = { name: "Carol" }; // TypeError — this WOULD reassign the binding</code></pre>
+
+        <h3 class="sub">0.4 — Hoisting and the temporal dead zone</h3>
+        <p>One term correction first: the actual JS name is <strong>temporal dead zone (TDZ)</strong>, not "deadlock" — deadlock is an unrelated concept from concurrent programming (two processes each stuck waiting on the other). Different problem, worth not conflating when searching documentation.</p>
+        <p>Before running any code, JS does a pass through the current scope and registers every declared name first — as if every declaration were quietly lifted to the top of its scope. That pre-registration is <strong>hoisting</strong>.</p>
+        <p>Function declarations are hoisted completely — name and body both, callable even above their own definition:</p>
+        <pre><code class="language-javascript">sayHi(); // works fine, runs before the definition below
+
+function sayHi() {
+  console.log("hi");
+}</code></pre>
+        <p><code class="inline">var</code> is hoisted but only the name, not the value — using it early gives <code class="inline">undefined</code> rather than an error:</p>
+        <pre><code class="language-javascript">console.log(x); // undefined — not a crash, but not 5 either
+var x = 5;</code></pre>
+        <p><code class="inline">let</code>/<code class="inline">const</code> are hoisted too, but locked behind the TDZ — touching them before their own declaration line runs throws an actual error instead of silently giving <code class="inline">undefined</code>:</p>
+        <pre><code class="language-javascript">console.log(y); // ReferenceError: Cannot access 'y' before initialization
+let y = 5;</code></pre>
+        <p><strong>Practical rule:</strong> always define a variable before using it, regardless of what hoisting technically allows. This is a "why does this specific error say what it says" tool, not something to lean on stylistically.</p>
+
+        <h3 class="sub">0.5 — undefined, null, and truthy/falsy</h3>
+        <p><code class="inline">undefined</code> is JS's automatic absence — a variable declared but never assigned, a missing object property. <code class="inline">null</code> is different: a value a human deliberately assigned to mean "empty on purpose." JS never produces <code class="inline">null</code> on its own.</p>
+        <p>JS allows any value, not just booleans, inside an <code class="inline">if</code> condition, converting it internally. Exactly eight values are falsy: <code class="inline">false, 0, -0, 0n, "", null, undefined, NaN</code>. Everything else is truthy — <strong>including empty arrays and empty objects</strong>:</p>
+        <pre><code class="language-javascript">if ([]) console.log("runs");  // yes — an empty array is truthy in JS
+if ({}) console.log("runs");  // yes — so is an empty object
+if (0) console.log("nope");
+if ("") console.log("nope");</code></pre>
+        <p><code class="inline">?.</code> (optional chaining) uses this: it checks whether the left side is null/undefined first, returning <code class="inline">undefined</code> instead of throwing if so — <code class="inline">session?.user</code> is safe even when <code class="inline">session</code> is <code class="inline">null</code>.</p>
+
+        <h3 class="sub">0.6 — Type conversion</h3>
+        <p><strong>Explicit</strong> — you ask for the conversion directly:</p>
+        <pre><code class="language-javascript">Number("42")     // 42
+String(42)       // "42"
+Boolean(0)       // false
+parseInt("42px") // 42 — stops at the first non-digit character</code></pre>
+        <p><strong>Implicit (coercion)</strong> — JS converts on its own, and this is where real bugs live:</p>
+        <pre><code class="language-javascript">"5" + 3   // "53"  — + next to a string means concatenate; the number becomes a string
+"5" - 3   // 2     — -  has no string meaning, so the string becomes a number instead
+"5" == 5  // true  — == allows coercion before comparing
+"5" === 5 // false — === compares type AND value, no coercion at all</code></pre>
+        <div class="lang-note">
+          <div class="lang-row py"><div class="tag">Rule of thumb</div><p>Always use <code class="inline">===</code>/<code class="inline">!==</code>, never <code class="inline">==</code>/<code class="inline">!=</code>. The loose versions' coercion rules are a well-documented source of bugs; the strict versions behave the way you'd actually expect.</p></div>
+        </div>
+
+        <h3 class="sub">0.7 — Control flow: if/else</h3>
+        <pre><code class="language-javascript">if (score > 90) {
+  grade = "A";
+} else if (score > 75) {
+  grade = "B";
+} else {
+  grade = "C";
+}
+
+// ternary — a compact if/else that PRODUCES a value directly
+const grade = score > 90 ? "A" : "C";
+
+// switch — many exact-match branches
+switch (status) {
+  case "done":  label = "Complete"; break;
+  case "error": label = "Failed"; break;
+  default:      label = "Pending";
+}</code></pre>
+        <p>Mechanically identical to R's/Python's <code class="inline">if</code>/<code class="inline">else</code>. The one real gotcha: the truthy/falsy conversion rules above govern what counts as "true" inside that condition — <code class="inline">if (count)</code> is false when <code class="inline">count</code> is <code class="inline">0</code>, which surprises people coming from stricter languages.</p>
+
+        <h3 class="sub">0.8 — Functions: declaring and calling</h3>
+        <p>Declare once, call as many times as needed by writing the name followed by parentheses:</p>
+        <pre><code class="language-javascript">function greet(name, greeting = "Hello") { // "greeting" has a default value
+  return `${greeting}, ${name}!`;
+}
+
+greet("Vignesh");            // "Hello, Vignesh!" — greeting uses its default
+greet("Vignesh", "Welcome"); // "Welcome, Vignesh!"</code></pre>
+        <p><code class="inline">name</code> and <code class="inline">greeting</code> in the definition are <strong>parameters</strong> — placeholders. <code class="inline">"Vignesh"</code> and <code class="inline">"Welcome"</code> at the call site are <strong>arguments</strong> — the actual values passed in. "Calling" a function always means writing its name immediately followed by <code class="inline">( )</code> with any arguments inside; without the parentheses, <code class="inline">greet</code> just refers to the function itself — it does not run it.</p>
+
+        <h3 class="sub">0.9 — Arrow functions: complete reference</h3>
+        <p>A second, more compact way to write a function, in near-universal use in modern JS. Every syntax variant:</p>
+        <pre><code class="language-javascript">() => expression                       // no parameters
+(x) => expression                      // one parameter (parens preferred — style rule below)
+(x, y) => expression                   // multiple parameters — parens required, no exceptions
+(x) => { const y = x * 2; return y; }  // block body — braces AND explicit return required
+(x = 10) => x                          // default parameter
+(...args) => args.length               // rest parameter
+({ name, id }) => `${name}-${id}`      // destructured parameter</code></pre>
+        <p><strong>The gotcha everyone hits once:</strong> returning an object literal directly needs wrapping parens — <code class="inline">{</code> immediately after <code class="inline">=></code> is parsed as the start of a code block, not an object:</p>
+        <pre><code class="language-javascript">const toOption = (id, label) => ({ id, label }); // correct — parens mark this as an expression, not a block</code></pre>
+        <p><strong>Where arrow functions belong:</strong> array method callbacks (<code class="inline">.map</code>/<code class="inline">.filter</code>/<code class="inline">.forEach</code> — the large majority of real-world use), Promise chains (<code class="inline">.then((data) => ...)</code>), and any callback where you want the surrounding code's <code class="inline">this</code> to carry through unchanged, since arrow functions never create their own <code class="inline">this</code> — more on that in 0.11.</p>
+        <p><strong>Where they don't belong:</strong> object methods that need <code class="inline">this</code> to refer to the object itself (use regular method syntax), constructors (arrow functions cannot be used with <code class="inline">new</code> — throws a TypeError), and anywhere the <code class="inline">arguments</code> object is needed — arrows have no <code class="inline">arguments</code> of their own; a rest parameter (<code class="inline">...args</code>) covers the same need in both regular and arrow functions.</p>
+        <div class="lang-note">
+          <div class="lang-row py"><div class="tag">Style guide</div><p>The <strong>Airbnb JavaScript Style Guide</strong> — the de facto community standard most companies' ESLint configs are built on — requires parens around every parameter, even a single one (<code class="inline">(x) => x</code>, not <code class="inline">x => x</code>), so adding a second parameter later never changes the visual shape of the code. It also limits the brace-free, implicit-return form to short, single-expression, side-effect-free transformations; once logic needs more than one statement, use the block-body form with an explicit <code class="inline">return</code> instead of cramming it into one line.</p></div>
+        </div>
+
+        <h3 class="sub">0.10 — Closures</h3>
+        <p>An inner function keeps a live, working reference to the variables from the scope it was created in, even after that outer scope has already finished running:</p>
+        <pre><code class="language-javascript">function makeCounter() {
+  let count = 0;
+  return function() {
+    count += 1;
+    return count;
+  };
+}
+const counterA = makeCounter();
+const counterB = makeCounter();
+counterA(); // 1
+counterA(); // 2 — counterA's own private count kept incrementing
+counterB(); // 1 — counterB has a SEPARATE count, untouched by counterA</code></pre>
+        <p>Each call to <code class="inline">makeCounter()</code> creates a brand-new <code class="inline">count</code> and a brand-new inner function closing over that specific variable — this is the standard way JS gets private, per-instance state without needing a class.</p>
+
+        <h3 class="sub">0.11 — The this keyword</h3>
+        <p>Inside a regular <code class="inline">function</code>, <code class="inline">this</code> is decided by <em>how the function is called</em>, not where it's written — a frequent source of bugs:</p>
+        <pre><code class="language-javascript">const btn = { label: "Send", handleClick: function() { console.log(this.label); } };
+document.querySelector("button").addEventListener("click", btn.handleClick);
+// logs undefined — `this` is decided by the CALLER (the button), not by btn</code></pre>
+        <p>An arrow function has no <code class="inline">this</code> of its own — it simply uses whatever <code class="inline">this</code> was in the surrounding code at the point it was written, which is exactly why arrow functions are the default choice for callbacks and event listeners: nobody has to reason about <code class="inline">this</code> binding at all.</p>
+
+        <h3 class="sub">0.12 — Classes</h3>
+        <p>A template for creating objects that share the same shape and behavior. <code class="inline">constructor</code> runs once, automatically, when a new instance is created with <code class="inline">new</code>:</p>
+        <pre><code class="language-javascript">class ChatMessage {
+  constructor(text, role) {
+    this.text = text;
+    this.role = role;
+  }
+  isFromUser() {
+    return this.role === "user";
+  }
+}
+
+const msg = new ChatMessage("hi there", "user"); // creates an instance
+msg.isFromUser(); // true — calling a method, same () syntax as any function</code></pre>
+        <div class="lang-note">
+          <div class="lang-row py"><div class="tag">Python</div><p>Directly parallel to Python's <code class="inline">class</code>/<code class="inline">__init__</code>/<code class="inline">self</code> — JS's <code class="inline">constructor</code> is <code class="inline">__init__</code>, and <code class="inline">this</code> inside a class behaves the way Python's explicit <code class="inline">self</code> does (methods called normally, not as standalone callbacks, keep <code class="inline">this</code> predictable — the ambiguity in 0.11 shows up specifically when a method gets detached and passed around as a callback).</p></div>
+        </div>
+
+        <h3 class="sub">0.13 — What you actually need to carry forward</h3>
+        <ul>
+          <li>Default to <code class="inline">const</code>; reach for <code class="inline">let</code> only when reassigning; never write <code class="inline">var</code>.</li>
+          <li>Objects/arrays copy by reference, not by value — mutating one variable can mutate what another variable points to.</li>
+          <li>Always use <code class="inline">===</code>/<code class="inline">!==</code>, never <code class="inline">==</code>/<code class="inline">!=</code>.</li>
+          <li><code class="inline">typeof null</code> lies — it says <code class="inline">"object"</code>.</li>
+          <li>Empty arrays/objects are truthy in JS — the opposite of Python.</li>
+          <li>Arrow functions for callbacks; regular functions/methods when <code class="inline">this</code> needs to mean the object itself.</li>
+          <li>When unsure of a method or API, MDN (developer.mozilla.org) is the reference, not a guess.</li>
+        </ul>
+
+        <h3 class="sub" style="color:var(--accent);">Part 2 — jQuery for Shiny</h3>
+        <p>Not a detour — Shiny's own JS core (<code class="inline">shiny.js</code>) was built on jQuery for years, and a lot of Shiny extension packages (shinydashboard, older custom widgets) still write <code class="inline">$(...)</code> instead of <code class="inline">document.querySelector(...)</code>. You'll meet this syntax reading other people's Shiny JS even where your own code stays vanilla.</p>
+
+        <h3 class="sub">0.14 — What jQuery is</h3>
+        <p>A JavaScript library that wraps DOM operations in a shorter, more forgiving syntax. Where vanilla JS needs several lines to select an element and check it exists before acting on it, jQuery collapses that into one chain. It has to be loaded before you can use it — a <code class="inline">&lt;script&gt;</code> tag pointing at the jQuery file, placed before your own code runs:</p>
+        <pre><code class="language-javascript">&lt;script src="https://code.jquery.com/jquery-3.5.1.js"&gt;&lt;/script&gt;</code></pre>
+        <p>Version matters for Shiny specifically: match whatever jQuery version Shiny itself ships, so you're not running two different copies of the library at once.</p>
+
+        <h3 class="sub">0.15 — Syntax: the one pattern everything follows</h3>
+        <pre><code class="language-javascript">$(selector).action();</code></pre>
+        <p><code class="inline">$</code> is just a function name — jQuery's entire public interface is one function, conventionally aliased to the dollar sign. <code class="inline">selector</code> uses the exact same CSS selector syntax as <code class="inline">querySelector</code> (class, id, element, attribute). <code class="inline">action()</code> is whatever you want done — read a value, change a style, attach a listener.</p>
+        <pre><code class="language-javascript">// vanilla JS — has to null-check before reading a property
+let el = document.querySelector('.text');
+let inner = el ? el.innerHTML : undefined;
+
+// jQuery — same result, no manual null-check needed
+let inner = $('.text').html();</code></pre>
+        <p>That null-check difference is the actual reason jQuery caught on: <code class="inline">$('.text')</code> never throws even if nothing matches — it returns an empty jQuery object you can safely keep chaining off of, where vanilla <code class="inline">querySelector</code> returns <code class="inline">null</code> and crashes on the next line if you don't check first.</p>
+
+        <h3 class="sub">0.16 — Traveling the DOM</h3>
+        <p>jQuery's traversal methods, the ones that come up constantly in real Shiny code:</p>
+        <pre><code class="language-javascript">children()   // direct children only, one level down
+find()       // descendants at ANY depth (like querySelectorAll, but from this element)
+closest()    // nearest ancestor (including itself) matching a selector — travels UP
+siblings()   // all siblings of the matched element(s)
+next()       // the immediately following sibling
+prev()       // the immediately preceding sibling
+first()      // first item in a matched set
+last()       // last item in a matched set
+filter()     // keep only elements matching a condition
+not()        // exclude elements matching a condition</code></pre>
+        <p><code class="inline">closest()</code> is the one worth internalizing first — it's the jQuery equivalent of vanilla's <code class="inline">element.closest(selector)</code> (which vanilla JS actually borrowed from jQuery), used constantly for "find the card/row/container this button lives inside" style lookups.</p>
+
+        <h3 class="sub">0.17 — Manipulating tags</h3>
+        <pre><code class="language-javascript">addClass('name')      // add a class
+removeClass('name')   // remove a class
+hasClass('name')      // check if a class is present — returns true/false
+attr('name')          // get an attribute; attr('name', 'val') sets it
+css('prop')           // get a CSS property; css('prop', 'val') sets it
+val()                 // get a form element's current value
+remove()               // delete the element from the DOM entirely
+after() / before()    // insert content immediately after / before</code></pre>
+        <pre><code class="language-javascript">$('.status-badge').addClass('active').css('color', 'green');</code></pre>
+
+        <h3 class="sub">0.18 — Chaining</h3>
+        <p>Since most jQuery methods return the same jQuery object they were called on, you can call another method directly on the result — no need to re-select the element each time:</p>
+        <pre><code class="language-javascript">$('ul')
+  .first()
+  .css('color', 'green')
+  .attr('id', 'myAwesomeItem')
+  .addClass('amazing-ul');</code></pre>
+        <p>Four operations on the same element, one statement, ending in a single <code class="inline">;</code>. Convention is one method per line, indented, so the chain reads top to bottom.</p>
+
+        <h3 class="sub">0.19 — Events</h3>
+        <pre><code class="language-javascript">$('#btn').on('click', function() {
+  // handle the click
+});
+
+// shorthand for common events also exists
+$('#btn').click();     // triggers a click programmatically
+$('#input').change();  // triggers a change event
+
+// .on() is what you reach for with CUSTOM, non-standard event names —
+// this is how shinydashboard and similar packages build their own event systems
+$(document).on('shiny:connected', function() {
+  // fires on a Shiny-specific custom event, not a native browser event
+});</code></pre>
+        <p><code class="inline">.on()</code> is the one to know well — unlike <code class="inline">addEventListener</code>, it accepts event names that don't exist natively in the browser at all, as long as something else in the page calls <code class="inline">.trigger('that-name')</code> to fire it. That's the mechanism most Shiny extension packages use to build their own internal event systems on top of jQuery.</p>
+
+        <h3 class="sub">0.20 — The document-ready pattern</h3>
+        <p>Running jQuery code before the page has finished loading means selectors find nothing — the elements don't exist yet. The standard guard:</p>
+        <pre><code class="language-javascript">$(document).ready(function() {
+  // your code — guaranteed the DOM is fully loaded
+});
+
+// shorthand for the exact same thing
+$(function() {
+  // your code
+});</code></pre>
+        <p>Skipping this is the single most common source of "why is my jQuery code doing nothing" bugs — the selector silently matches zero elements because it ran too early, and nothing errors, it just quietly does nothing.</p>
+
+        <h3 class="sub">0.21 — What you need to carry forward (jQuery)</h3>
+        <ul>
+          <li><code class="inline">$(selector).action()</code> is the entire pattern — everything else is which selector, which action.</li>
+          <li>jQuery selectors never throw on zero matches — vanilla <code class="inline">querySelector</code> returns <code class="inline">null</code> and needs a manual check first.</li>
+          <li><code class="inline">closest()</code>, <code class="inline">find()</code>, <code class="inline">siblings()</code> cover most real traversal needs.</li>
+          <li><code class="inline">.on()</code> handles both native events and Shiny's own custom event names — <code class="inline">addEventListener</code> only handles native ones.</li>
+          <li>Always wrap jQuery code in <code class="inline">$(document).ready(...)</code> or its <code class="inline">$(function(){...})</code> shorthand.</li>
+        </ul>
+      </section>
+
+      <!-- ============ LESSON 1 ============ -->
+      <section class="lesson-section" data-id="l1">
+        <div class="crumb">MODULE 1 · CORE LANGUAGE FOUNDATIONS</div>
+        <h2 class="page-title">Lesson 1 — Variables &amp; Values</h2>
+        <p class="page-sub">const/let, block scope, primitive vs. reference values, and why const doesn't freeze an object.</p>
+
+        <h3 class="sub">1.1 — const, let, and why var is dead</h3>
+        <p>Three ways to declare a variable. <code class="inline">var</code> is the 1995 original — function-scoped, causes bugs, you will never write it. <code class="inline">let</code> and <code class="inline">const</code> are block-scoped: they only exist inside the <code class="inline">{ }</code> they were declared in.</p>
+        <pre><code class="language-javascript">const title = "Draft post";   // cannot be reassigned
+let count = 0;                 // can be reassigned
+count = count + 1;              // fine
+title = "New title";            // TypeError: Assignment to constant variable</code></pre>
+        <div class="lang-note">
+          <div class="lang-row r"><div class="tag">R</div><p>Same idea as R's <code class="inline">{ }</code> blocks in <code class="inline">if</code>/<code class="inline">for</code>, except JS enforces the boundary strictly rather than leaking the variable out.</p></div>
+          <div class="lang-row py"><div class="tag">Python</div><p>Python has <strong>no block scope at all</strong> — a variable assigned inside an <code class="inline">if</code> or <code class="inline">for</code> is still visible after it ends. JS's block scoping is actually stricter than both R and Python here.</p></div>
+        </div>
+        <p>Default to <code class="inline">const</code>. Only reach for <code class="inline">let</code> when the variable will genuinely change.</p>
+
+        <h3 class="sub">1.2 — Primitive vs. reference values</h3>
+        <p>The concept most likely to trip you coming from R, because R copies almost everything by value. JS does not.</p>
+        <p><strong>Primitives</strong> (string, number, boolean, undefined, null) are copied by value:</p>
+        <pre><code class="language-javascript">let a = 5;
+let b = a;   // b gets a COPY of 5
+b = 10;
+console.log(a); // still 5 — a and b are independent</code></pre>
+        <p><strong>Objects and arrays</strong> are copied by reference — the variable holds a pointer to shared data, not the data itself:</p>
+        <pre><code class="language-javascript">let obj1 = { name: "draft" };
+let obj2 = obj1;         // obj2 points to the SAME object as obj1
+obj2.name = "published";
+console.log(obj1.name);  // "published" — same object, both changed</code></pre>
+        <p>This is exactly why React's rule is "never mutate state directly, always create a new object." Same reference, same memory address — React can't tell anything changed, so it won't re-render.</p>
+        <div class="lang-note">
+          <div class="lang-row py"><div class="tag">Python</div><p>Python's mutable vs. immutable split is the closer match, even than R: <code class="inline">list2 = list1</code> aliases the same list — <code class="inline">list2.append(4)</code> shows up in <code class="inline">list1</code> too, identical to the JS array behavior above. <code class="inline">int</code>/<code class="inline">str</code>/<code class="inline">tuple</code> copy by value, like JS primitives.</p></div>
+        </div>
+
+        <h3 class="sub">1.3 — const does not freeze the object</h3>
+        <p><code class="inline">const</code> locks the <em>variable binding</em>, not the <em>contents</em>:</p>
+        <pre><code class="language-javascript">const user = { name: "Alice" };
+user.name = "Bob";        // fine — not reassigning `user`, just mutating what it points to
+user = { name: "Carol" }; // TypeError — this reassigns the binding, which const forbids</code></pre>
+        <p>"Same box, two labels": <code class="inline">const arr2 = arr1</code> doesn't copy the array — <code class="inline">arr2.push(4)</code> mutates the one shared box, so <code class="inline">arr1</code> changes too.</p>
+
+        <h3 class="sub">1.4 — The 7 basic value types</h3>
+        <p>JS has exactly 7 <strong>primitive</strong> types, plus one catch-all non-primitive type. <code class="inline">typeof</code> tells you which one you're holding:</p>
+        <pre><code class="language-javascript">typeof "hello"     // "string"
+typeof 42            // "number"
+typeof true            // "boolean"
+typeof undefined         // "undefined"
+typeof null                // "object" — a 25-year-old bug; null is NOT actually an object
+typeof 10n                    // "bigint"
+typeof Symbol()                 // "symbol"
+typeof {}                         // "object"</code></pre>
+        <p><strong>string, number, boolean, undefined, null, bigint, symbol</strong> — those 7. Everything else is an <strong>object</strong> (plain objects, arrays, functions, dates) — the reference-type category above, copied by pointer, not by value. <code class="inline">bigint</code>'s <code class="inline">n</code> suffix marks arbitrary-precision integers past <code class="inline">Number.MAX_SAFE_INTEGER</code>; you'll rarely write one by hand.</p>
+        <div class="lang-note">
+          <div class="lang-row py"><div class="tag">Python</div><p>Python's <code class="inline">type(x)</code> is the <code class="inline">typeof</code> equivalent. One real difference: Python keeps <code class="inline">int</code> and <code class="inline">float</code> as separate types, where JS has one <code class="inline">number</code> for both — <code class="inline">42</code> and <code class="inline">42.0</code> are the exact same JS value.</p></div>
+        </div>
+
+        <details class="check">
+          <summary>Check yourself</summary>
+          <div class="check-q"><pre><code class="language-javascript">const arr1 = [1, 2, 3];
+const arr2 = arr1;
+arr2.push(4);
+console.log(arr1);</code></pre></div>
+          <div class="check-a"><strong>Answer:</strong> <code class="inline">[1, 2, 3, 4]</code> — not <code class="inline">[1,2,3]</code>. arr2 is the same array as arr1, not a copy, so mutating one mutates both.</div>
+        </details>
+      </section>
+
+      <!-- ============ LESSON 2 ============ -->
+      <section class="lesson-section" data-id="l2">
+        <div class="crumb">MODULE 1 · CORE LANGUAGE FOUNDATIONS</div>
+        <h2 class="page-title">Lesson 2 — undefined/null &amp; Truthy-Falsy</h2>
+        <p class="page-sub">Two flavors of "nothing," optional chaining, and where JS quietly differs from Python.</p>
+
+        <h3 class="sub">2.1 — undefined vs. null</h3>
+        <p><code class="inline">undefined</code> is JS's default absence — a variable declared but never assigned, a function with no return, a missing property:</p>
+        <pre><code class="language-javascript">let x;
+console.log(x); // undefined — declared, never assigned
+
+const obj = { name: "Alice" };
+console.log(obj.age); // undefined — no such property, no crash</code></pre>
+        <p><code class="inline">null</code> is different: a value someone deliberately assigned to mean "empty on purpose." JS never hands you null unprompted.</p>
+        <div class="lang-note">
+          <div class="lang-row r"><div class="tag">R</div><p><code class="inline">null</code> maps roughly to R's <code class="inline">NULL</code>. <code class="inline">undefined</code> has no clean R equivalent — and don't reach for R's <code class="inline">NA</code> here; that's about missing data in a vector, a different problem.</p></div>
+          <div class="lang-row py"><div class="tag">Python</div><p>Python collapses this whole distinction into one concept, <code class="inline">None</code>. There's no Python equivalent of "declared but never assigned" producing a distinct value the way JS's <code class="inline">undefined</code> does.</p></div>
+        </div>
+
+        <h3 class="sub">2.2 — Optional chaining ?.</h3>
+        <p>Without it, reaching into a possibly-missing object throws and kills the program. <code class="inline">?.</code> checks first — if the left side is null/undefined, stop and return undefined instead of crashing.</p>
+        <pre><code class="language-javascript">const session = null;
+console.log(session.user);  // TypeError: Cannot read properties of null
+console.log(session?.user); // undefined — no crash</code></pre>
+
+        <h3 class="sub">2.3 — Truthy/falsy conversion</h3>
+        <p>JS lets you use <em>any</em> value in an <code class="inline">if</code>, converting it internally. Exactly eight values are falsy: <code class="inline">false, 0, -0, 0n, "", null, undefined, NaN</code>. Everything else is truthy — <strong>including <code class="inline">[]</code> and <code class="inline">{}</code></strong>.</p>
+        <pre><code class="language-javascript">if ([]) console.log("runs");   // yes — empty array is truthy in JS
+if ({}) console.log("runs");   // yes — empty object too
+if (0) console.log("nope");
+if ("") console.log("nope");</code></pre>
+        <div class="lang-note">
+          <div class="lang-row py"><div class="tag">Python — opposite behavior</div><p>In Python, <code class="inline">if []:</code> is <code class="inline">False</code> — empty containers are falsy. In JS, <code class="inline">if ([])</code> <strong>runs</strong> — empty arrays and objects are truthy. This is a direct reversal between the two languages, not just a missing feature, and it trips people constantly.</p></div>
+        </div>
+        <p>Real guard clause, read right to left: <code class="inline">if (!session?.user) throw new Error('Unauthorized')</code> — get user safely, or undefined if session itself is null; <code class="inline">!</code> flips it. One line covers "no session" AND "session with no user."</p>
+
+        <details class="check">
+          <summary>Check yourself</summary>
+          <div class="check-q"><pre><code class="language-javascript">const post = { title: "", views: 0 };
+if (!post.title)  console.log("no title");
+if (!post.views)  console.log("no views");</code></pre></div>
+          <div class="check-a"><strong>Answer:</strong> Both log. "" and 0 are both falsy, so a real (empty) title and a real (zero) view count both read as "missing" — !post.title can't tell deliberate-blank from actually-absent.</div>
+        </details>
+      </section>
+
+      <!-- ============ LESSON 3 ============ -->
+      <section class="lesson-section" data-id="l3">
+        <div class="crumb">MODULE 1 · CORE LANGUAGE FOUNDATIONS</div>
+        <h2 class="page-title">Lesson 3 — Functions</h2>
+        <p class="page-sub">Declarations vs. arrows, hoisting, closures, this binding, block scope, higher-order functions, naming conventions, and a complete arrow-function reference — pulled from a real Shiny custom-JS file.</p>
+
+        <h3 class="sub">3.1 — Declarations vs. arrow functions</h3>
+        <p>Named <code class="inline">function</code> for reusable utilities called by name elsewhere. Arrow functions for one-off callbacks handed straight to something else:</p>
+        <pre><code class="language-javascript">function novaTextarea() {
+  return document.querySelector(NOVA_SEL.textarea);
+}
+
+document.addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".nova-card-actions button");
+});</code></pre>
+
+        <h3 class="sub">3.2 — Hoisting</h3>
+        <p>Before running any code, JS registers every declared name in the current scope first. Function declarations are fully hoisted — name AND body, usable above their own definition:</p>
+        <pre><code class="language-javascript">sayHi(); // works fine
+
+function sayHi() { console.log("hi"); }</code></pre>
+        <p><code class="inline">let</code>/<code class="inline">const</code> are hoisted but locked behind a "temporal dead zone" — using them before their line runs throws instead of silently giving undefined:</p>
+        <pre><code class="language-javascript">console.log(y); // ReferenceError: Cannot access 'y' before initialization
+let y = 5;</code></pre>
+        <div class="lang-note">
+          <div class="lang-row r"><div class="tag">R</div><p>R has nothing like this — it evaluates and executes as it goes, no separate registration pass.</p></div>
+          <div class="lang-row py"><div class="tag">Python</div><p>Python has no hoisting either — a name must be defined above the line that uses it, full stop. That's actually closer to JS's <code class="inline">let</code>/<code class="inline">const</code> behavior (the temporal dead zone) than to JS's function-hoisting, which has no real Python equivalent.</p></div>
+        </div>
+
+        <h3 class="sub">3.3 — Closures</h3>
+        <p>An inner function keeps a live reference to variables from the scope it was born in, even after that scope has finished running:</p>
+        <pre><code class="language-javascript">novaAttachments.forEach((att) => {
+  remove.addEventListener("click", () => {
+    const i = novaAttachments.indexOf(att); // att still correct, minutes later
+    if (i >= 0) novaAttachments.splice(i, 1);
+  });
+});</code></pre>
+        <p>Using an index instead of closing over <code class="inline">att</code> directly would break the moment an earlier chip is removed and every later index shifts.</p>
+        <div class="lang-note">
+          <div class="lang-row py"><div class="tag">Python</div><p>Python closures work the same way — a nested <code class="inline">def</code> captures its enclosing scope. One real gap: <em>reading</em> an outer variable needs nothing special, but <em>reassigning</em> one from inside the inner function requires the <code class="inline">nonlocal</code> keyword. JS has no such requirement either way.</p></div>
+        </div>
+
+        <h3 class="sub">3.4 — Arrow functions and this</h3>
+        <p>A regular function gets a fresh <code class="inline">this</code>, decided by how it's <em>called</em>. An arrow function has none of its own — it uses whatever <code class="inline">this</code> was in the surrounding code when written. Why nearly every listener in real Shiny JS is an arrow function.</p>
+        <div class="lang-note">
+          <div class="lang-row py"><div class="tag">Python</div><p>Python sidesteps this entire problem. <code class="inline">self</code> is just an explicit first parameter you name yourself — never inferred from how the method was called, so none of this ambiguity exists.</p></div>
+        </div>
+
+        <h3 class="sub">3.5 — Bare block scope</h3>
+        <p>A stray <code class="inline">{ }</code> with no function around it is just a scope wall — keeps a variable from leaking as a global. Pre-2015, people got the same effect with an IIFE: <code class="inline">(function(){ ... })()</code>.</p>
+
+        <h3 class="sub">3.6 — Higher-order functions</h3>
+        <p>Functions that take or return functions — the array methods everywhere in real code:</p>
+        <pre><code class="language-javascript">kids.every((k) => k.classList.contains("nova-tool-line"))</code></pre>
+        <div class="lang-note">
+          <div class="lang-row r"><div class="tag">R</div><p>Same shape as <code class="inline">purrr::every()</code> or <code class="inline">all(sapply(kids, f))</code> — different syntax, identical idea.</p></div>
+          <div class="lang-row py"><div class="tag">Python</div><p><code class="inline">.every()</code> maps to Python's built-in <code class="inline">all()</code>. <code class="inline">.map()</code>/<code class="inline">.filter()</code> have direct Python equivalents too (<code class="inline">map()</code>, <code class="inline">filter()</code>), but idiomatic Python usually reaches for a list comprehension instead — <code class="inline">[k for k in kids if cond]</code> rather than chaining <code class="inline">.filter()</code>.</p></div>
+        </div>
+
+        <h3 class="sub">3.7 — Naming conventions</h3>
+        <p>Not enforced by the language, followed anyway. <strong>camelCase</strong> — variables, functions, methods (default for almost everything). <strong>PascalCase</strong> — classes/constructors: <code class="inline">Array</code>, <code class="inline">Promise</code>, <code class="inline">MutationObserver</code>. <strong>UPPER_SNAKE_CASE</strong> — constants meant as fixed configuration, a human signal ("don't edit this casually"), not enforcement.</p>
+        <div class="lang-note">
+          <div class="lang-row py"><div class="tag">Python — the one to watch</div><p>PEP 8 uses <code class="inline">snake_case</code> for variables and functions — the opposite of JS's camelCase default. Classes (<code class="inline">PascalCase</code>) and constants (<code class="inline">UPPER_SNAKE_CASE</code>) actually match JS convention. The variable/function case is the one that will keep autopiloting wrong when you switch languages mid-day.</p></div>
+        </div>
+
+        <h3 class="sub">3.8 — Arrow functions: complete reference</h3>
+        <p>Expanding on 3.1 — the full syntax, every variant:</p>
+        <pre><code class="language-javascript">() => expression                       // no parameters
+(x) => expression                      // one parameter (parens preferred — style rule below)
+(x, y) => expression                   // multiple parameters — parens required
+(x) => { const y = x * 2; return y; }  // block body — braces AND explicit return required
+(x = 10) => x                          // default parameter
+(...args) => args.length               // rest parameter
+({ name, id }) => `${name}-${id}`      // destructured parameter</code></pre>
+        <p><strong>The gotcha everyone hits once:</strong> returning an object literal directly needs wrapping parens — <code class="inline">{</code> right after <code class="inline">=></code> parses as a block, not an object:</p>
+        <pre><code class="language-javascript">const toOption = (id, label) => ({ id, label }); // correct — parens mark this as an expression</code></pre>
+        <p><strong>Where they belong:</strong> array method callbacks (<code class="inline">.map</code>/<code class="inline">.filter</code>/<code class="inline">.forEach</code> — the overwhelming majority of real-world use), Promise chains (<code class="inline">.then((data) => ...)</code>), and event listeners — because an arrow function never creates its own <code class="inline">this</code>, it simply uses whatever <code class="inline">this</code> was in the surrounding code, which is exactly the behavior a listener callback wants.</p>
+        <p><strong>Where they don't:</strong> object methods needing <code class="inline">this</code> to mean the object itself (use regular method syntax instead), constructors (arrow functions can't take <code class="inline">new</code> — throws a TypeError), and anywhere the <code class="inline">arguments</code> object is needed (arrows have none of their own — use a rest parameter).</p>
+        <div class="lang-note">
+          <div class="lang-row py"><div class="tag">Style guide</div><p>The <strong>Airbnb JavaScript Style Guide</strong> — the de facto community standard most companies' ESLint configs are built on — requires parens around every parameter, even a single one (<code class="inline">(x) => x</code>, not <code class="inline">x => x</code>), so adding a second parameter later never changes the visual shape. It also limits implicit-return (no-brace) form to short, single-expression, side-effect-free transformations — once logic needs more than one statement, use the block-body form with an explicit <code class="inline">return</code> rather than cramming it into one line.</p></div>
+        </div>
+
+        <h3 class="sub">Bonus — document &amp; querySelector</h3>
+        <p><code class="inline">document</code> is a global the <em>browser</em> creates automatically on page load — not imported, not a module. It's really <code class="inline">window.document</code>. Browser-only: plain Node has no <code class="inline">document</code> at all.</p>
+        <p><code class="inline">querySelector</code> is a <em>method</em> on document (or any element) taking a CSS-selector string, returning the first match or null:</p>
+        <pre><code class="language-javascript">document.querySelector("shiny-chat-container textarea");</code></pre>
+        <p>Type <code class="inline">document.</code> in DevTools' Console, or in a <code class="inline">.ts</code> file in your editor (TypeScript ships <code class="inline">lib.dom.d.ts</code>) for full autocomplete — the closest thing to R's <code class="inline">dir()</code>/autocomplete here. Reference: <strong>developer.mozilla.org/en-US/docs/Web/API/Document</strong>.</p>
+
+        <details class="check">
+          <summary>Check yourself</summary>
+          <div class="check-q"><pre><code class="language-javascript">function makeCounter() {
+  let count = 0;
+  return function() { count += 1; return count; };
+}
+const counterA = makeCounter();
+const counterB = makeCounter();
+console.log(counterA());
+console.log(counterA());
+console.log(counterB());</code></pre></div>
+          <div class="check-a"><strong>Answer:</strong> 1, 2, 1. Each call to makeCounter() creates a brand-new count and a brand-new closure over it — counterA and counterB are fully independent.</div>
+        </details>
+      </section>
+
+      <!-- ============ LESSON 21 ============ -->
+      <section class="lesson-section" data-id="l21">
+        <div class="crumb">MODULE 5 · SHINY INTEGRATION API</div>
+        <h2 class="page-title">Lesson 21 — Shiny.setInputValue</h2>
+        <p class="page-sub">Why R and JS need a persistent connection at all, and how JS sends a value back to the server.</p>
+
+        <h3 class="sub">21.1 — Why a plain HTTP request isn't enough</h3>
+        <p>An ordinary web request closes the connection as soon as it's answered — fine for loading a page once, but not for an app where the server needs to react every time you move a slider or click a button, potentially dozens of times a minute. Shiny instead opens one persistent, two-way connection per browser tab — a <strong>WebSocket</strong> — the moment the app loads, and keeps it open for the life of the session. Both sides can send messages down that same connection at any time, in either direction, without re-opening anything.</p>
+        <p>One consequence worth knowing: R itself is single-threaded, so if two people have the same app open, their messages queue and get handled one at a time on the server side — not a bug, just how a single R process necessarily works.</p>
+
+        <h3 class="sub">21.2 — Sending a value from JS to R</h3>
+        <p><code class="inline">Shiny.setInputValue(id, value)</code> is the JS-side call that pushes a value down that WebSocket connection to the server, where it shows up as <code class="inline">input$id</code> — exactly as if a built-in input widget had produced it.</p>
+        <pre><code class="language-javascript">document.querySelector('#theme-toggle').addEventListener('click', () => {
+  const isDark = document.body.classList.toggle('dark-mode');
+  Shiny.setInputValue('current_theme', isDark ? 'dark' : 'light');
+});</code></pre>
+        <p>On the R side, that value is just <code class="inline">input$current_theme</code>, reactive like any other input — an <code class="inline">observeEvent(input$current_theme, {...})</code> fires every time this line runs.</p>
+
+        <h3 class="sub">21.3 — The priority option</h3>
+        <p>By default, Shiny only triggers reactivity when the value actually <em>changes</em> — setting the same value twice in a row does nothing the second time. Passing a third argument overrides that:</p>
+        <pre><code class="language-javascript">Shiny.setInputValue('current_theme', 'dark', {priority: 'event'});</code></pre>
+        <p>With <code class="inline">{priority: 'event'}</code>, every call fires the reactive, even if the value is identical to last time — needed for things like a "retry" click where the value itself doesn't change but the action should still re-run.</p>
+      </section>
+
+      <!-- ============ LESSON 22 ============ -->
+      <section class="lesson-section" data-id="l22">
+        <div class="crumb">MODULE 5 · SHINY INTEGRATION API</div>
+        <h2 class="page-title">Lesson 22 — addCustomMessageHandler</h2>
+        <p class="page-sub">The reverse direction: R pushing data to the browser without waiting for the user to do anything.</p>
+
+        <h3 class="sub">22.1 — Why this is a separate mechanism from setInputValue</h3>
+        <p><code class="inline">Shiny.setInputValue</code> (Lesson 21) only moves data JS → R. For R → JS — the server deciding, on its own, to tell the browser something (a background job finished, a scheduled refresh happened) — Shiny pairs two calls, one on each side, matched by a shared string name:</p>
+        <ul>
+          <li><strong>R side:</strong> <code class="inline">session$sendCustomMessage(type, message)</code></li>
+          <li><strong>JS side:</strong> <code class="inline">Shiny.addCustomMessageHandler(type, function(message) {...})</code></li>
+        </ul>
+        <p>The <code class="inline">type</code> string is what links them — think of it as a named channel. R sends on that channel, JS listens on that same channel; the two sides never call each other directly.</p>
+
+        <h3 class="sub">22.2 — A worked example</h3>
+        <p>R side, inside the server function:</p>
+        <pre><code class="language-javascript">observeEvent(input$refresh_data, {
+  new_count <- nrow(get_latest_rows())
+  session$sendCustomMessage("row-count-updated", list(count = new_count))
+})</code></pre>
+        <p>JS side, registered once when the page loads:</p>
+        <pre><code class="language-javascript">Shiny.addCustomMessageHandler('row-count-updated', function(message) {
+  document.querySelector('#row-count-badge').textContent = message.count;
+});</code></pre>
+        <p><code class="inline">message</code> arrives in JS as a plain object — whatever R's <code class="inline">list(...)</code> contained gets converted to JSON automatically on the way over, so <code class="inline">message.count</code> just works without any manual parsing.</p>
+
+        <h3 class="sub">22.3 — Registration timing matters</h3>
+        <p><code class="inline">addCustomMessageHandler</code> has to run <em>before</em> R ever sends on that channel, or the message arrives with nothing listening and is simply dropped — no error, just silently lost. That's why it's typically registered inside a document-ready block (Lesson 0.20) right when the custom JS file loads, not inside some later conditional path that might not have run yet.</p>
+      </section>
+
+      <!-- ============ PLACEHOLDER TEMPLATE (reused) ============ -->
+      <section class="lesson-section" data-id="placeholder">
+        <div class="crumb" id="phCrumb">MODULE</div>
+        <h2 class="page-title" id="phTitle">Lesson</h2>
+        <div class="status-card">
+          <strong>Not written yet</strong>
+          This page is on the syllabus but hasn't been taught yet.<br>Ask for it by name in chat and it lands here next.
+        </div>
+      </section>
+
+      <div class="pager">
+        <button id="prevBtn">← Previous</button>
+        <button id="nextBtn">Next →</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ---- Course tree: module -> lessons. status: done | partial | todo ----
+const COURSE = [
+  { mod: "Module 0 — Introduction", lessons: [
+    { id:"l0", title:"0. Intro to JS + jQuery", status:"done" },
+  ]},
+  { mod: "Module 1 — Core Language Foundations", lessons: [
+    { id:"l1", title:"1. Variables & Values", status:"done" },
+    { id:"l2", title:"2. undefined/null & Truthy-Falsy", status:"done" },
+    { id:"l3", title:"3. Functions", status:"done" },
+    { id:"l4", title:"4. Objects & Destructuring", status:"todo" },
+    { id:"l5", title:"5. Arrays & Array Methods", status:"todo" },
+    { id:"l6", title:"6. Strings & Template Literals", status:"todo" },
+    { id:"l7", title:"7. Classes & Prototypes", status:"todo" },
+    { id:"l8", title:"8. Modules (import/export)", status:"todo" },
+  ]},
+  { mod: "Module 2 — Asynchronous JS", lessons: [
+    { id:"l9", title:"9. The Event Loop", status:"partial" },
+    { id:"l10", title:"10. Promises", status:"todo" },
+    { id:"l11", title:"11. async/await", status:"partial" },
+  ]},
+  { mod: "Module 3 — Browser & DOM", lessons: [
+    { id:"l12", title:"12. The DOM Tree", status:"partial" },
+    { id:"l13", title:"13. Events & Delegation", status:"todo" },
+    { id:"l14", title:"14. Building Elements", status:"todo" },
+    { id:"l15", title:"15. Forms & FormData", status:"todo" },
+  ]},
+  { mod: "Module 4 — Advanced Browser APIs", lessons: [
+    { id:"l16", title:"16. WeakMap", status:"todo" },
+    { id:"l17", title:"17. MutationObserver", status:"todo" },
+    { id:"l18", title:"18. requestAnimationFrame", status:"todo" },
+    { id:"l19", title:"19. localStorage", status:"todo" },
+    { id:"l20", title:"20. Web Components basics", status:"todo" },
+  ]},
+  { mod: "Module 5 — Shiny Integration API", lessons: [
+    { id:"l21", title:"21. Shiny.setInputValue", status:"done" },
+    { id:"l22", title:"22. addCustomMessageHandler", status:"done" },
+    { id:"l23", title:"23. The R side", status:"todo" },
+    { id:"l24", title:"24. Attaching JS to an app", status:"todo" },
+  ]},
+  { mod: "Module 6 — Synthesis", lessons: [
+    { id:"l25", title:"25. Read nova.js end to end", status:"todo" },
+    { id:"l26", title:"26. Capstone: custom Shiny input", status:"todo" },
+  ]},
+  { mod: "Module 7 — React/Next.js (parked)", lessons: [
+    { id:"l27", title:"TypeScript + React + Next.js", status:"todo" },
+  ]},
+];
+
+const FLAT = COURSE.flatMap(m => m.lessons);
+const navTree = document.getElementById('navTree');
+const wrap = document.getElementById('contentWrap');
+
+COURSE.forEach(m => {
+  const modDiv = document.createElement('div');
+  modDiv.className = 'module';
+  const h = document.createElement('div');
+  h.className = 'module-title';
+  h.textContent = m.mod;
+  modDiv.appendChild(h);
+  m.lessons.forEach(l => {
+    const a = document.createElement('div');
+    a.className = 'lesson ' + l.status;
+    a.dataset.id = l.id;
+    a.innerHTML = '<span class="dot"></span><span>' + l.title + '</span>';
+    a.addEventListener('click', () => showLesson(l.id));
+    modDiv.appendChild(a);
+  });
+  navTree.appendChild(modDiv);
+});
+
+function showLesson(id){
+  const lesson = FLAT.find(l => l.id === id);
+  if (!lesson) return;
+  document.querySelectorAll('.lesson-section').forEach(s => s.classList.remove('visible'));
+  if (lesson.status === 'done' || lesson.status === 'partial') {
+    const real = document.querySelector('.lesson-section[data-id="'+id+'"]');
+    if (real) { real.classList.add('visible'); wrap.scrollTop = 0; window.scrollTo(0,0); }
+  } else {
+    const mod = COURSE.find(m => m.lessons.some(l => l.id === id));
+    document.getElementById('phCrumb').textContent = mod.mod.toUpperCase();
+    document.getElementById('phTitle').textContent = lesson.title;
+    document.querySelector('.lesson-section[data-id="placeholder"]').classList.add('visible');
+    window.scrollTo(0,0);
+  }
+  document.querySelectorAll('nav .lesson').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+  updatePager(id);
+  saveState(id);
+}
+
+function updatePager(id){
+  const idx = FLAT.findIndex(l => l.id === id);
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  prevBtn.disabled = idx <= 0;
+  nextBtn.disabled = idx >= FLAT.length - 1;
+  prevBtn.onclick = () => idx > 0 && showLesson(FLAT[idx-1].id);
+  nextBtn.onclick = () => idx < FLAT.length-1 && showLesson(FLAT[idx+1].id);
+}
+
+async function saveState(id){
+  try { await window.storage.set('js-course-last-lesson', id, false); } catch(e) { /* standalone file, no storage available — fine */ }
+}
+async function loadState(){
+  let start = 'l0';
+  try {
+    const r = await window.storage.get('js-course-last-lesson', false);
+    if (r && r.value) start = r.value;
+  } catch(e) { /* fall back to l1 */ }
+  showLesson(start);
+}
+
+// ---- Copy buttons + syntax highlighting (self-contained, no CDN) ----
+function escapeHtml(s){
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+const TOKEN_RE = /(\/\/[^\n]*)|(\/\*[\s\S]*?\*\/)|(`(?:\\.|\$\{[^}]*\}|[^`\\])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(\b\d+\.?\d*n?\b)|(\b(?:const|let|var|function|return|if|else|for|while|class|constructor|new|this|typeof|async|await|switch|case|default|break|try|catch|finally|throw|extends|static|import|export|from|of|in|instanceof|void|yield|delete|do|continue|get|set)\b)|(\b(?:true|false|null|undefined)\b)/g;
+function highlightJS(rawCode){
+  // Single pass over the raw source: walk match by match with one combined
+  // regex, so a later token type can never re-scan (and corrupt) HTML a
+  // previous match already generated. Sequential string mutation was the
+  // actual bug — this replaces that approach entirely rather than patching it.
+  let result = '';
+  let lastIndex = 0;
+  let m;
+  TOKEN_RE.lastIndex = 0;
+  while ((m = TOKEN_RE.exec(rawCode)) !== null) {
+    result += escapeHtml(rawCode.slice(lastIndex, m.index));
+    if (m[1] !== undefined || m[2] !== undefined) result += '<span class="token comment">' + escapeHtml(m[1] ?? m[2]) + '</span>';
+    else if (m[3] !== undefined) result += '<span class="token string">' + escapeHtml(m[3]) + '</span>';
+    else if (m[4] !== undefined) result += '<span class="token number">' + escapeHtml(m[4]) + '</span>';
+    else if (m[5] !== undefined) result += '<span class="token keyword">' + escapeHtml(m[5]) + '</span>';
+    else if (m[6] !== undefined) result += '<span class="token boolean">' + escapeHtml(m[6]) + '</span>';
+    lastIndex = TOKEN_RE.lastIndex;
+  }
+  result += escapeHtml(rawCode.slice(lastIndex));
+  return result;
+}
+document.querySelectorAll('pre code').forEach((el) => {
+  el.innerHTML = highlightJS(el.textContent);
+});
+
+document.querySelectorAll('pre').forEach(pre => {
+  const wrap = document.createElement('div');
+  wrap.className = 'code-block';
+  pre.parentNode.insertBefore(wrap, pre);
+  wrap.appendChild(pre);
+
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.setAttribute('aria-label', 'Copy code');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+  btn.addEventListener('click', () => {
+    const code = pre.querySelector('code');
+    navigator.clipboard.writeText(code.innerText).then(() => {
+      btn.classList.add('copied');
+      setTimeout(() => btn.classList.remove('copied'), 1200);
+    });
+  });
+  wrap.appendChild(btn);
+});
+loadState();
+</script>
+</body>
+</html>
